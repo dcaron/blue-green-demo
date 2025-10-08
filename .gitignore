@@ -39,4 +39,4 @@ logs/
 
 # Concourse CI
 #keys/
-#ci/credentials.yml
+ci/credentials.yml
