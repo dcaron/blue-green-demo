@@ -11,7 +11,7 @@ resources:
     type: git
     icon: github
     source:
-      uri: https://github.com/YOUR_ORG/YOUR_REPO.git
+      uri: ((git-uri))
       branch: main
       # username: ((git-username))
       # password: ((git-password))
