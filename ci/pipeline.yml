@@ -67,9 +67,7 @@ jobs:
                   memory: 1G
                   instances: 1
                   path: app.jar
-                  buildpack: java_buildpack
                   env:
-                    JBP_CONFIG_OPEN_JDK_JRE: '{ jre: { version: 17.+ } }'
                     SPRING_PROFILES_ACTIVE: production
                   routes:
                   - route: user-api-((cf-app-suffix)).((cf-domain))
