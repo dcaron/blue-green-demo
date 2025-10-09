@@ -151,6 +151,43 @@
             margin-top: 5px;
         }
 
+        .app-info {
+            background: white;
+            border-radius: 10px;
+            padding: 15px 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .info-item {
+            text-align: center;
+        }
+
+        .info-label {
+            color: #999;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            color: #333;
+            font-size: 1.1em;
+            font-weight: 600;
+        }
+
+        .commit-id {
+            font-family: 'Courier New', monospace;
+            background: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
         @media (max-width: 768px) {
             h1 {
                 font-size: 2em;
@@ -165,6 +202,17 @@
 <body>
     <div class="container">
         <h1>👥 User Directory</h1>
+
+        <div class="app-info" id="appInfo" style="display: none;">
+            <div class="info-item">
+                <div class="info-label">Git Commit</div>
+                <div class="info-value"><span class="commit-id" id="commitId">-</span></div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Uptime</div>
+                <div class="info-value" id="uptime">-</div>
+            </div>
+        </div>
 
         <div class="stats" id="stats" style="display: none;">
             <div class="stats-number" id="userCount">0</div>
@@ -246,8 +294,47 @@
             }
         }
 
-        // Load users when page loads
-        document.addEventListener('DOMContentLoaded', loadUsers);
+        // Fetch and display app info
+        async function loadAppInfo() {
+            try {
+                const response = await fetch('/info');
+                if (response.ok) {
+                    const info = await response.json();
+
+                    // Display git commit
+                    if (info.git && info.git.commitId) {
+                        document.getElementById('commitId').textContent = info.git.commitId;
+                    }
+
+                    // Display uptime
+                    if (info.uptime && info.uptime.formatted) {
+                        document.getElementById('uptime').textContent = info.uptime.formatted;
+
+                        // Update uptime every second
+                        setInterval(() => {
+                            fetch('/info')
+                                .then(res => res.json())
+                                .then(data => {
+                                    if (data.uptime && data.uptime.formatted) {
+                                        document.getElementById('uptime').textContent = data.uptime.formatted;
+                                    }
+                                })
+                                .catch(err => console.error('Error updating uptime:', err));
+                        }, 1000);
+                    }
+
+                    document.getElementById('appInfo').style.display = 'flex';
+                }
+            } catch (error) {
+                console.error('Error loading app info:', error);
+            }
+        }
+
+        // Load users and app info when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUsers();
+            loadAppInfo();
+        });
     </script>
 </body>
 </html>
