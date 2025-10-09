@@ -99,20 +99,8 @@ jobs:
 
       - put: cf-environment
         params:
-          command: login
-          api: ((cf-api-endpoint))
-          username: ((cf-username))
-          password: ((cf-password))
-          org: ((cf-org))
-          space: ((cf-space))
-          skip_cert_check: false
-
-      - put: cf-environment
-        params:
           command: push
-          app_name: user-api
           manifest: cf-deploy/manifest.yml
-          path: cf-deploy/app.jar
 
   - name: test-deployment
     plan:
