@@ -97,10 +97,26 @@ jobs:
 
                 ls -la cf-deploy/
 
-      - put: cf-environment
-        params:
-          command: push
-          manifest: cf-deploy/manifest.yml
+      - task: deploy-to-cf
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source:
+              repository: governmentpaas/cf-cli
+              tag: latest
+          inputs:
+            - name: cf-deploy
+          run:
+            path: sh
+            args:
+              - -exc
+              - |
+                cf api ((cf-api-endpoint))
+                cf auth ((cf-username)) ((cf-password))
+                cf target -o ((cf-org)) -s ((cf-space))
+                cd cf-deploy
+                cf push -f manifest.yml
 
   - name: test-deployment
     plan:
