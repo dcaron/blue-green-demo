@@ -102,65 +102,98 @@ jobs:
                 cd cf-deploy
 
                 APP_NAME="user-api"
+                BLUE_APP="${APP_NAME}-blue"
                 GREEN_APP="${APP_NAME}-green"
-                ROUTE="user-api-((cf-app-suffix)).((cf-domain))"
+                MAIN_ROUTE="user-api-((cf-app-suffix)).((cf-domain))"
+                BLUE_ROUTE="user-api-blue-((cf-app-suffix)).((cf-domain))"
+                GREEN_ROUTE="user-api-green-((cf-app-suffix)).((cf-domain))"
 
                 echo "=== Starting Blue-Green Deployment ==="
 
-                # Check if the main app exists
-                if cf app $APP_NAME > /dev/null 2>&1; then
-                  echo "Main app $APP_NAME exists - performing blue-green deployment"
-                  BLUE_EXISTS=true
-                else
-                  echo "Main app $APP_NAME does not exist - performing initial deployment"
-                  BLUE_EXISTS=false
+                # Determine which app is currently active
+                BLUE_HAS_MAIN_ROUTE=false
+                GREEN_HAS_MAIN_ROUTE=false
+
+                if cf app $BLUE_APP > /dev/null 2>&1; then
+                  echo "Blue app exists"
+                  if cf app $BLUE_APP | grep -q "$MAIN_ROUTE"; then
+                    BLUE_HAS_MAIN_ROUTE=true
+                    echo "Blue app has main route - deploying to GREEN"
+                    TARGET_APP=$GREEN_APP
+                    TARGET_ROUTE=$GREEN_ROUTE
+                    CURRENT_APP=$BLUE_APP
+                    CURRENT_ROUTE=$BLUE_ROUTE
+                  fi
                 fi
 
-                # Deploy green app
-                echo "Deploying green app: $GREEN_APP"
-                cf push $GREEN_APP -f manifest.yml --no-route
+                if cf app $GREEN_APP > /dev/null 2>&1; then
+                  echo "Green app exists"
+                  if cf app $GREEN_APP | grep -q "$MAIN_ROUTE"; then
+                    GREEN_HAS_MAIN_ROUTE=true
+                    echo "Green app has main route - deploying to BLUE"
+                    TARGET_APP=$BLUE_APP
+                    TARGET_ROUTE=$BLUE_ROUTE
+                    CURRENT_APP=$GREEN_APP
+                    CURRENT_ROUTE=$GREEN_ROUTE
+                  fi
+                fi
 
-                # Wait for green app to start
-                echo "Waiting for green app to be ready..."
+                # If neither has the main route, this is initial deployment
+                if [ "$BLUE_HAS_MAIN_ROUTE" = false ] && [ "$GREEN_HAS_MAIN_ROUTE" = false ]; then
+                  echo "Initial deployment - deploying to BLUE"
+                  TARGET_APP=$BLUE_APP
+                  TARGET_ROUTE=$BLUE_ROUTE
+                  CURRENT_APP=""
+                fi
+
+                # Deploy new version to target color
+                echo "Deploying new version to: $TARGET_APP"
+                cf push $TARGET_APP -f manifest.yml --no-route
+
+                # Wait for target app to start
+                echo "Waiting for target app to be ready..."
                 sleep 10
 
-                # Verify green app is running
-                if ! cf app $GREEN_APP | grep "started"; then
-                  echo "ERROR: Green app failed to start"
-                  cf logs $GREEN_APP --recent
+                # Verify target app is running
+                if ! cf app $TARGET_APP | grep "started"; then
+                  echo "ERROR: Target app failed to start"
+                  cf logs $TARGET_APP --recent
                   exit 1
                 fi
 
-                # Map the route to green app
-                echo "Mapping route $ROUTE to green app"
-                cf map-route $GREEN_APP ((cf-domain)) --hostname user-api-((cf-app-suffix))
+                # Map color-specific route to target app
+                echo "Mapping color-specific route $TARGET_ROUTE to $TARGET_APP"
+                cf map-route $TARGET_APP ((cf-domain)) --hostname user-api-${TARGET_APP##*-}-((cf-app-suffix))
 
-                # Wait for route to propagate
+                # Map main route to target app
+                echo "Mapping main route $MAIN_ROUTE to $TARGET_APP"
+                cf map-route $TARGET_APP ((cf-domain)) --hostname user-api-((cf-app-suffix))
+
+                # Wait for routes to propagate
                 sleep 5
 
-                # Test the green app on the shared route
-                echo "Testing green app..."
+                # Test the target app on the main route
+                echo "Testing target app on main route..."
                 # Add basic health check here if needed
 
-                if [ "$BLUE_EXISTS" = true ]; then
-                  # Unmap route from blue app
-                  echo "Unmapping route from blue app"
-                  cf unmap-route $APP_NAME ((cf-domain)) --hostname user-api-((cf-app-suffix)) || echo "Route not mapped to blue app"
+                # If there was a current app, unmap main route from it
+                if [ -n "$CURRENT_APP" ]; then
+                  echo "Unmapping main route from $CURRENT_APP"
+                  cf unmap-route $CURRENT_APP ((cf-domain)) --hostname user-api-((cf-app-suffix)) || echo "Route not mapped"
 
-                  # Stop and delete the old blue app
-                  echo "Stopping old blue app"
-                  cf stop $APP_NAME
-
-                  echo "Deleting old blue app"
-                  cf delete $APP_NAME -f
+                  echo "Current app $CURRENT_APP is still accessible at $CURRENT_ROUTE for rollback"
                 fi
 
-                # Rename green to blue
-                echo "Renaming green app to main app name"
-                cf rename $GREEN_APP $APP_NAME
-
                 echo "=== Blue-Green Deployment Complete ==="
-                cf app $APP_NAME
+                echo "Active app: $TARGET_APP"
+                echo "  - Main route: $MAIN_ROUTE"
+                echo "  - Color route: $TARGET_ROUTE"
+                if [ -n "$CURRENT_APP" ]; then
+                  echo "Inactive app: $CURRENT_APP (available for rollback)"
+                  echo "  - Color route: $CURRENT_ROUTE"
+                fi
+
+                cf apps | grep user-api
 
   - name: test-deployment
     plan:
