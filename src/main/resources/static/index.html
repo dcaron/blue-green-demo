@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Directory</title>
     <style>
+        :root {
+            --primary-color: #16a34a;
+            --secondary-color: #22c55e;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,9 +18,10 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             min-height: 100vh;
             padding: 40px 20px;
+            transition: background 0.5s ease;
         }
 
         .container {
@@ -55,7 +61,8 @@
             left: 0;
             right: 0;
             height: 5px;
-            background: linear-gradient(90deg, #16a34a 0%, #22c55e 100%);
+            background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            transition: background 0.5s ease;
         }
 
         .user-card:hover {
@@ -67,18 +74,19 @@
             position: absolute;
             top: 15px;
             right: 20px;
-            background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
             padding: 5px 12px;
             border-radius: 20px;
             font-size: 0.85em;
             font-weight: bold;
+            transition: background 0.5s ease;
         }
 
         .user-avatar {
             width: 80px;
             height: 80px;
-            background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -88,6 +96,7 @@
             font-weight: bold;
             margin: 0 auto 20px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: background 0.5s ease;
         }
 
         .user-name {
@@ -139,10 +148,11 @@
         .stats-number {
             font-size: 2.5em;
             font-weight: bold;
-            background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            transition: background 0.5s ease;
         }
 
         .stats-label {
@@ -205,6 +215,10 @@
 
         <div class="app-info" id="appInfo" style="display: none;">
             <div class="info-item">
+                <div class="info-label">Theme</div>
+                <div class="info-value" id="themeColor">-</div>
+            </div>
+            <div class="info-item">
                 <div class="info-label">Git Commit</div>
                 <div class="info-value"><span class="commit-id" id="commitId">-</span></div>
             </div>
@@ -225,6 +239,31 @@
     </div>
 
     <script>
+        // Theme configuration
+        const themes = {
+            blue: { primary: '#2563eb', secondary: '#3b82f6', name: 'Blue' },
+            green: { primary: '#16a34a', secondary: '#22c55e', name: 'Green' }
+        };
+
+        // Function to set theme based on commit ID
+        function setTheme(commitId) {
+            // Use last character of commit ID to determine theme
+            const lastChar = commitId.slice(-1);
+            const hashValue = parseInt(lastChar, 16);
+            const isEven = hashValue % 2 === 0;
+            const themeName = isEven ? 'blue' : 'green';
+            const theme = themes[themeName];
+
+            // Update CSS variables
+            document.documentElement.style.setProperty('--primary-color', theme.primary);
+            document.documentElement.style.setProperty('--secondary-color', theme.secondary);
+
+            // Update theme display
+            document.getElementById('themeColor').textContent = theme.name;
+
+            console.log(`Theme set to ${theme.name} (commit ends with ${lastChar}, hash value: ${hashValue})`);
+        }
+
         // Function to get initials from name
         function getInitials(name) {
             return name
@@ -301,9 +340,10 @@
                 if (response.ok) {
                     const info = await response.json();
 
-                    // Display git commit
+                    // Set theme based on git commit
                     if (info.git && info.git.commitId) {
                         document.getElementById('commitId').textContent = info.git.commitId;
+                        setTheme(info.git.commitId);
                     }
 
                     // Display uptime
