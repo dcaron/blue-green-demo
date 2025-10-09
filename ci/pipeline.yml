@@ -1,11 +1,4 @@
 ---
-resource_types:
-  - name: cf-cli-resource
-    type: docker-image
-    source:
-      repository: nulldriver/cf-cli-resource
-      tag: latest
-
 resources:
   - name: app-source
     type: git
@@ -15,16 +8,6 @@ resources:
       branch: main
       # username: ((git-username))
       # password: ((git-password))
-
-  - name: cf-environment
-    type: cf-cli-resource
-    source:
-      api: ((cf-api-endpoint))
-      username: ((cf-username))
-      password: ((cf-password))
-      organization: ((cf-org))
-      space: ((cf-space))
-      skip_cert_check: false
 
 jobs:
   - name: build-and-deploy
