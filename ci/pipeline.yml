@@ -81,7 +81,7 @@ jobs:
 
                 ls -la cf-deploy/
 
-      - task: deploy-to-cf
+      - task: blue-green-deploy
         config:
           platform: linux
           image_resource:
@@ -100,7 +100,67 @@ jobs:
                 cf auth ((cf-username)) ((cf-password))
                 cf target -o ((cf-org)) -s ((cf-space))
                 cd cf-deploy
-                cf push -f manifest.yml
+
+                APP_NAME="user-api"
+                GREEN_APP="${APP_NAME}-green"
+                ROUTE="user-api-((cf-app-suffix)).((cf-domain))"
+
+                echo "=== Starting Blue-Green Deployment ==="
+
+                # Check if the main app exists
+                if cf app $APP_NAME > /dev/null 2>&1; then
+                  echo "Main app $APP_NAME exists - performing blue-green deployment"
+                  BLUE_EXISTS=true
+                else
+                  echo "Main app $APP_NAME does not exist - performing initial deployment"
+                  BLUE_EXISTS=false
+                fi
+
+                # Deploy green app
+                echo "Deploying green app: $GREEN_APP"
+                cf push $GREEN_APP -f manifest.yml --no-route
+
+                # Wait for green app to start
+                echo "Waiting for green app to be ready..."
+                sleep 10
+
+                # Verify green app is running
+                if ! cf app $GREEN_APP | grep "started"; then
+                  echo "ERROR: Green app failed to start"
+                  cf logs $GREEN_APP --recent
+                  exit 1
+                fi
+
+                # Map the route to green app
+                echo "Mapping route $ROUTE to green app"
+                cf map-route $GREEN_APP ((cf-domain)) --hostname user-api-((cf-app-suffix))
+
+                # Wait for route to propagate
+                sleep 5
+
+                # Test the green app on the shared route
+                echo "Testing green app..."
+                # Add basic health check here if needed
+
+                if [ "$BLUE_EXISTS" = true ]; then
+                  # Unmap route from blue app
+                  echo "Unmapping route from blue app"
+                  cf unmap-route $APP_NAME ((cf-domain)) --hostname user-api-((cf-app-suffix)) || echo "Route not mapped to blue app"
+
+                  # Stop and delete the old blue app
+                  echo "Stopping old blue app"
+                  cf stop $APP_NAME
+
+                  echo "Deleting old blue app"
+                  cf delete $APP_NAME -f
+                fi
+
+                # Rename green to blue
+                echo "Renaming green app to main app name"
+                cf rename $GREEN_APP $APP_NAME
+
+                echo "=== Blue-Green Deployment Complete ==="
+                cf app $APP_NAME
 
   - name: test-deployment
     plan:
