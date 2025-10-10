@@ -340,10 +340,24 @@
                 if (response.ok) {
                     const info = await response.json();
 
-                    // Set theme based on git commit
+                    // Set theme based on deployment color (from CF app name) or fall back to git commit
+                    if (info.deploymentColor) {
+                        // Use actual deployment color from Cloud Foundry
+                        const theme = themes[info.deploymentColor];
+                        if (theme) {
+                            document.documentElement.style.setProperty('--primary-color', theme.primary);
+                            document.documentElement.style.setProperty('--secondary-color', theme.secondary);
+                            document.getElementById('themeColor').textContent = theme.name;
+                            console.log(`Theme set to ${theme.name} from deployment color`);
+                        }
+                    } else if (info.git && info.git.commitId) {
+                        // Fallback to git-based theme for local development
+                        setTheme(info.git.commitId);
+                    }
+
+                    // Display commit ID
                     if (info.git && info.git.commitId) {
                         document.getElementById('commitId').textContent = info.git.commitId;
-                        setTheme(info.git.commitId);
                     }
 
                     // Display uptime
