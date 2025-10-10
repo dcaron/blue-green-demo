@@ -3,12 +3,15 @@ package com.example.userapi.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.boot.info.GitProperties;
+import org.springframework.core.env.Environment;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -27,13 +30,16 @@ public class AppInfoController {
     private final Optional<GitProperties> gitProperties;
     private final Optional<BuildProperties> buildProperties;
     private final Instant startTime;
+    private final Environment environment;
 
     @Autowired
     public AppInfoController(
             Optional<GitProperties> gitProperties,
-            Optional<BuildProperties> buildProperties) {
+            Optional<BuildProperties> buildProperties,
+            Environment environment) {
         this.gitProperties = gitProperties;
         this.buildProperties = buildProperties;
+        this.environment = environment;
         this.startTime = Instant.now();
     }
 
@@ -78,7 +84,50 @@ public class AppInfoController {
         uptimeInfo.put("startTime", startTime.toString());
         info.put("uptime", uptimeInfo);
 
+        // Deployment color from Cloud Foundry app name
+        String deploymentColor = getDeploymentColor();
+        if (deploymentColor != null) {
+            info.put("deploymentColor", deploymentColor);
+        }
+
         return ResponseEntity.ok(info);
+    }
+
+    /**
+     * Determines the deployment color (blue/green) from the Cloud Foundry app name.
+     * Falls back to git commit hash if not running in CF.
+     *
+     * @return "blue", "green", or null if cannot determine
+     */
+    private String getDeploymentColor() {
+        // Try to get from CF environment (VCAP_APPLICATION)
+        String vcapApplication = environment.getProperty("VCAP_APPLICATION");
+        if (vcapApplication != null && !vcapApplication.isEmpty()) {
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                Map<String, Object> vcapMap = mapper.readValue(vcapApplication, Map.class);
+                String appName = (String) vcapMap.get("application_name");
+
+                if (appName != null) {
+                    if (appName.contains("-blue")) {
+                        return "blue";
+                    } else if (appName.contains("-green")) {
+                        return "green";
+                    }
+                }
+            } catch (Exception e) {
+                // Fall through to git-based detection
+            }
+        }
+
+        // Fall back to git commit hash-based color (for local development)
+        if (gitProperties.isPresent()) {
+            String commitId = gitProperties.get().getShortCommitId();
+            int hash = commitId.hashCode();
+            return (hash % 2 == 0) ? "blue" : "green";
+        }
+
+        return null;
     }
 
     private String formatDuration(Duration duration) {
