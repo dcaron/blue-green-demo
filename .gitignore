@@ -40,3 +40,8 @@ logs/
 # Concourse CI
 #keys/
 ci/credentials.yml
+ci/saa-credentials.yml
+
+# Nexus credentials
+nexus/credentials.env
+nexus-data/

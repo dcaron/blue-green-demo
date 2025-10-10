@@ -1,35 +1,33 @@
 services:
   concourse-db:
-    image: postgres:15
+    image: postgres:latest
     environment:
       POSTGRES_DB: concourse
       POSTGRES_PASSWORD: concourse_pass
       POSTGRES_USER: concourse_user
       PGDATA: /database
+      POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - concourse-db-data:/database
     networks:
       - concourse-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U concourse_user"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "pg_isready -U concourse_user -d concourse"]
+      interval: 3s
+      timeout: 3s
       retries: 5
 
-  concourse-web:
-    image: concourse/concourse:7.11
-    command: web
+  concourse:
+    image: concourse/concourse:latest
+    command: quickstart
+    privileged: true
+    cgroup: host
     depends_on:
       concourse-db:
         condition: service_healthy
     ports:
       - "8081:8080"
-    volumes:
-      - ./keys/web:/concourse-keys
     environment:
-      CONCOURSE_SESSION_SIGNING_KEY: /concourse-keys/session_signing_key
-      CONCOURSE_TSA_HOST_KEY: /concourse-keys/tsa_host_key
-      CONCOURSE_TSA_AUTHORIZED_KEYS: /concourse-keys/authorized_worker_keys
       CONCOURSE_POSTGRES_HOST: concourse-db
       CONCOURSE_POSTGRES_USER: concourse_user
       CONCOURSE_POSTGRES_PASSWORD: concourse_pass
@@ -37,34 +35,41 @@ services:
       CONCOURSE_EXTERNAL_URL: http://localhost:8081
       CONCOURSE_ADD_LOCAL_USER: concourse:secret
       CONCOURSE_MAIN_TEAM_LOCAL_USER: concourse
+      CONCOURSE_WORKER_BAGGAGECLAIM_DRIVER: overlay
+      CONCOURSE_CLIENT_SECRET: Y29uY291cnNlLXdlYgo=
+      CONCOURSE_TSA_CLIENT_SECRET: Y29uY291cnNlLXdvcmtlcgo=
       CONCOURSE_CLUSTER_NAME: local-dev
-      CONCOURSE_LOG_LEVEL: debug
+      CONCOURSE_WORKER_CONTAINERD_DNS_SERVER: "8.8.8.8"
+      CONCOURSE_WORKER_RUNTIME: containerd
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     networks:
       - concourse-net
     restart: unless-stopped
 
-  concourse-worker:
-    image: concourse/concourse:7.11
-    command: worker
-    privileged: true
-    depends_on:
-      - concourse-web
+  nexus:
+    image: sonatype/nexus3:latest
+    ports:
+      - "8082:8081"
     volumes:
-      - ./keys/worker:/concourse-keys
+      - nexus-data:/nexus-data
+      - ./nexus/scripts:/opt/sonatype/nexus/scripts:ro
     environment:
-      CONCOURSE_TSA_HOST: concourse-web:2222
-      CONCOURSE_TSA_PUBLIC_KEY: /concourse-keys/tsa_host_key.pub
-      CONCOURSE_TSA_WORKER_PRIVATE_KEY: /concourse-keys/worker_key
-      CONCOURSE_GARDEN_NETWORK_POOL: 10.254.0.0/16
-      CONCOURSE_BAGGAGECLAIM_DRIVER: overlay
-      CONCOURSE_RUNTIME: containerd
-      CONCOURSE_LOG_LEVEL: debug
+      INSTALL4J_ADD_VM_PARAMS: "-Xms512m -Xmx512m -XX:MaxDirectMemorySize=273m"
     networks:
       - concourse-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8081/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
 
 volumes:
   concourse-db-data:
+  nexus-data:
 
 networks:
   concourse-net:

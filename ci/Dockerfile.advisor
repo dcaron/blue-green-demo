@@ -1,0 +1,25 @@
+# Dockerfile for Spring Application Advisor pipeline tasks
+# This image includes the advisor CLI for use in Concourse pipelines
+
+FROM maven:3.9-eclipse-temurin-17
+
+# Install required tools
+RUN apt-get update && \
+    apt-get install -y curl jq git && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install GitHub CLI
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
+    dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | \
+    tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
+    apt-get update && \
+    apt-get install -y gh && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy the advisor CLI binary (Linux version)
+COPY bin/advisor /usr/local/bin/advisor
+RUN chmod +x /usr/local/bin/advisor
+
+# Verify installation
+RUN advisor --version

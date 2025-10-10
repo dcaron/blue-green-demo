@@ -174,6 +174,35 @@ The application is pre-populated with three users:
 | 2  | Bob Smith      | bob.smith@example.com      |
 | 3  | Charlie Brown  | charlie.brown@example.com  |
 
+## Nexus Repository Manager
+
+This project includes a local Nexus Repository Manager for caching Maven dependencies, including the Tanzu Enterprise Java repository.
+
+### Quick Setup
+
+1. **Configure Tanzu credentials:**
+   ```bash
+   cp nexus/credentials.env.template nexus/credentials.env
+   # Edit nexus/credentials.env with your Tanzu credentials
+   ```
+
+2. **Start Nexus:**
+   ```bash
+   docker-compose up -d nexus
+   ```
+
+3. **Configure the Tanzu mirror:**
+   ```bash
+   ./nexus/scripts/setup-tanzu-repo.sh
+   ```
+
+4. **Access Nexus UI:**
+   - URL: http://localhost:8082
+   - Default user: `admin`
+   - Get password: `docker exec $(docker ps -qf "name=nexus") cat /nexus-data/admin.password`
+
+For detailed instructions, see [nexus/README.md](nexus/README.md)
+
 ## Future Enhancements
 
 - Add POST, PUT, DELETE endpoints
