@@ -51,7 +51,7 @@ jobs:
 
                 # Install advisor CLI from repository (extract from tar)
                 tar -xf app-source/ci/bin/application-advisor-cli-linux-1.5.2.tar -C /tmp
-                cp /tmp/advisor /usr/local/bin/advisor
+                cp /tmp/cli-binary/advisor /usr/local/bin/advisor
                 chmod +x /usr/local/bin/advisor
 
                 cd app-source
@@ -184,7 +184,7 @@ jobs:
 
                 # Install advisor CLI from repository (extract from tar)
                 tar -xf app-source/ci/bin/application-advisor-cli-linux-1.5.2.tar -C /tmp
-                cp /tmp/advisor /usr/local/bin/advisor
+                cp /tmp/cli-binary/advisor /usr/local/bin/advisor
                 chmod +x /usr/local/bin/advisor
 
                 cd app-source
