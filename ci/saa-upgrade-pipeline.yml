@@ -217,8 +217,8 @@ jobs:
                 export GH_TOKEN=$GITHUB_TOKEN
                 REPO_PATH=$(echo $GIT_URI | sed 's#https://github.com/##' | sed 's#.git$##')
 
-                # Check if similar issue already exists
-                EXISTING_ISSUE=$(gh issue list --repo $REPO_PATH --state open --label "saa-advice" --limit 1 --json number --jq '.[0].number' || echo "")
+                # Check if similar issue already exists (search by title)
+                EXISTING_ISSUE=$(gh issue list --repo $REPO_PATH --state open --search "Spring Application Advisor - Best Practice Recommendations in:title" --limit 1 --json number --jq '.[0].number' || echo "")
 
                 if [ -n "$EXISTING_ISSUE" ]; then
                   echo "Advice issue already exists (#$EXISTING_ISSUE). Updating..."
@@ -232,7 +232,6 @@ jobs:
                   gh issue create \
                     --repo $REPO_PATH \
                     --title "💡 Spring Application Advisor - Best Practice Recommendations" \
-                    --label "saa-advice" \
                     --body "## Spring Application Advisor Recommendations
 
                 Spring Application Advisor has identified best practice improvements for this project.
