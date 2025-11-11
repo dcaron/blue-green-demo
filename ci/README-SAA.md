@@ -53,24 +53,6 @@ Fill in:
 
 ### 3. Deploy the Pipeline
 
-**Important**: This pipeline is currently not fully functional due to a limitation:
-- The advisor CLI binary (118MB) exceeds GitHub's 100MB file limit and cannot be committed
-- The pipeline needs the advisor binary to be available either:
-  - In a Docker image pushed to a registry (Docker Hub, GitHub Container Registry, etc.)
-  - Or installed via authenticated download from Broadcom Artifactory
-
-**To make this pipeline work**, you would need to:
-1. Build and push the maven-advisor image to a registry:
-   ```bash
-   docker build -t your-registry/maven-advisor:latest -f ci/Dockerfile.advisor ci/
-   docker push your-registry/maven-advisor:latest
-   ```
-2. Update `ci/saa-upgrade-pipeline.yml` to use your registry image instead of maven
-
-Alternatively, you could modify the pipeline to download the advisor CLI with Broadcom credentials.
-
-###  4. Deploy the Pipeline (when image is available)
-
 ```bash
 # Login to Concourse
 fly -t local login -c http://localhost:8081 -u concourse -p secret
@@ -85,7 +67,7 @@ fly -t local set-pipeline \
 fly -t local unpause-pipeline -p saa-automation
 ```
 
-### 5. Trigger Manually (Optional)
+### 4. Trigger Manually (Optional)
 
 ```bash
 # Trigger upgrade check

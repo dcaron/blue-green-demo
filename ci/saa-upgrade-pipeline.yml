@@ -49,8 +49,9 @@ jobs:
                 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
                 apt-get update && apt-get install -y gh
 
-                # Install advisor CLI from repository
-                cp app-source/ci/bin/advisor /usr/local/bin/advisor
+                # Install advisor CLI from repository (extract from tar)
+                tar -xf app-source/ci/bin/application-advisor-cli-linux-1.5.2.tar -C /tmp
+                cp /tmp/advisor /usr/local/bin/advisor
                 chmod +x /usr/local/bin/advisor
 
                 cd app-source
@@ -181,8 +182,9 @@ jobs:
                 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
                 apt-get update && apt-get install -y gh
 
-                # Install advisor CLI from repository
-                cp app-source/ci/bin/advisor /usr/local/bin/advisor
+                # Install advisor CLI from repository (extract from tar)
+                tar -xf app-source/ci/bin/application-advisor-cli-linux-1.5.2.tar -C /tmp
+                cp /tmp/advisor /usr/local/bin/advisor
                 chmod +x /usr/local/bin/advisor
 
                 cd app-source
